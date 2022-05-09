@@ -11,7 +11,7 @@ int bar_init(bar **bar, student **students, product **products){
     char buf[MAX_SIZE_LINE];
 
     // Carregar info-geral do bar
-    *bar = (struct bar*)calloc(1, sizeof(bar));
+    *bar = (struct bar*)calloc(1, sizeof(struct bar));
 
     FILE *init_fp;
     init_fp = fopen(INIT_FILENAME, "r");
@@ -39,6 +39,18 @@ int bar_init(bar **bar, student **students, product **products){
     strcat((*bar)->address,bar_postal);
 
     free(bar_address); free(bar_postal);
+
+    fgets(buf, MAX_SIZE_LINE, init_fp);
+
+    char * d = strtok(buf, "-");
+    (*bar)->today.day = atoi(d);
+
+    d = strtok(NULL, "-");
+    (*bar)->today.month = atoi(d);
+
+    d = strtok(NULL, "-");
+    (*bar)->today.year = atoi(d);
+
     fclose(init_fp);
 
     FILE *students_fp;
@@ -85,7 +97,6 @@ int bar_init(bar **bar, student **students, product **products){
         (*students) = s;
 
     }
-
     fclose(students_fp);
 
     FILE *products_fp;
@@ -112,7 +123,6 @@ int bar_init(bar **bar, student **students, product **products){
         (*products) = p;
 
     }
-
     fclose(products_fp);
 
     return 0;
@@ -125,6 +135,14 @@ int main(int argc, char *argv[]){
     bill *bills = NULL;
     bar_init(&bar_set, &students, &products);
     printf("\n*************************** ");
-    printf("\n***                     ***");
-    printf("\n*************************** ");
+    printf("\n***      %s     ***", bar_set->name);
+    printf("\n***************************");
+
+    printf("\nHOJE: \t %d/%d/%d\n", bar_set->today.day, bar_set->today.month, bar_set->today.year);
+
+
+
+
+
+
 }
