@@ -7,11 +7,11 @@
 
 #include "main.h"
 
-int bar_init(bar *bar, student *students, product *products){
+int bar_init(bar **bar, student **students, product **products){
     char buf[MAX_SIZE_LINE];
 
     // Carregar info-geral do bar
-    bar = (struct bar*)calloc(1, sizeof(bar));
+    *bar = (struct bar*)calloc(1, sizeof(bar));
 
     FILE *init_fp;
     init_fp = fopen(INIT_FILENAME, "r");
@@ -22,8 +22,8 @@ int bar_init(bar *bar, student *students, product *products){
 
     fgets(buf, MAX_SIZE_LINE, init_fp);
     char *bar_name = strtok(buf, "\n");
-    bar->name = malloc(sizeof(char) * strlen(bar_name));
-    strcpy(bar->name, bar_name);
+    (*bar)->name = malloc(sizeof(char) * strlen(bar_name));
+    strcpy((*bar)->name, bar_name);
 
     fgets(buf, MAX_SIZE_LINE, init_fp);
     char *bar_address = malloc(sizeof(char)* strlen(buf));
@@ -33,10 +33,10 @@ int bar_init(bar *bar, student *students, product *products){
     char *bar_postal = malloc(sizeof(char)* strlen(buf));
     strcpy(bar_postal, strtok(buf, "\n"));
 
-    bar->address = malloc(sizeof(char)*(strlen(bar_name)+strlen(bar_name)+1));
-    strcpy(bar->address,bar_address);
-    strcat(bar->address,"\n");
-    strcat(bar->address,bar_postal);
+    (*bar)->address = malloc(sizeof(char)*(strlen(bar_name)+strlen(bar_name)+1));
+    strcpy((*bar)->address,bar_address);
+    strcat((*bar)->address,"\n");
+    strcat((*bar)->address,bar_postal);
 
     free(bar_address); free(bar_postal);
     fclose(init_fp);
@@ -79,15 +79,41 @@ int bar_init(bar *bar, student *students, product *products){
         s->birthday.year = atoi(date_ptr);
         free(date);
 
-        s->prev = students;
+        s->prev = (*students);
         s->next = NULL;
-        if(students!=NULL) students->next = s;
-        students = s;
+        if((*students)!=NULL) (*students)->next = s;
+        (*students) = s;
 
     }
 
     fclose(students_fp);
 
+    FILE *products_fp;
+    products_fp = fopen(PRODUCTS_FILENAME, "r");
+    if (products_fp == NULL){
+        printf("Não foi possível carregar o ficheiro de PRODUTOS.");
+        exit(1);
+    }
+    while(fgets(buf, MAX_SIZE_LINE, products_fp)!=NULL){
+        product *p = calloc(1,sizeof(product));
+
+        char *part = strtok(buf, ";");
+        p->barcode = malloc(sizeof(char)* strlen(part));
+        strcpy(p->barcode, part);
+
+        part = strtok(NULL, ";");
+        p->name = malloc(sizeof(char)* strlen(part));
+        strcpy(p->name, part);
+
+        part = strtok(NULL,";");
+        p->price = atof(part);
+
+        p->next = (*products);
+        (*products) = p;
+
+    }
+
+    fclose(products_fp);
 
     return 0;
 
@@ -97,7 +123,7 @@ int main(int argc, char *argv[]){
     student *students = NULL;
     product *products = NULL;
     bill *bills = NULL;
-    bar_init(bar_set, students, products);
+    bar_init(&bar_set, &students, &products);
     printf("\n*************************** ");
     printf("\n***                     ***");
     printf("\n*************************** ");

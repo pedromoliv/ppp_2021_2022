@@ -67,7 +67,7 @@ typedef struct bill{
 
 
 
-int bar_init(bar *bar, student *students, product *products);
+int bar_init(bar **bar, student **students, product **products);
 int main(int argc, char *argv[]);
 
 
