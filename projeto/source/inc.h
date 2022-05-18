@@ -9,6 +9,7 @@
 #define PPP_MAIN_H
 
 #define MAX_SIZE_LINE 100
+#define MAX_SIZE_INPUT 64
 #define INIT_FILENAME "init.txt"
 #define STUDENTS_FILENAME "students.txt"
 #define PRODUCTS_FILENAME "products.txt"
@@ -32,9 +33,7 @@ typedef struct bar{
     date today;
 }bar;
 
-
 typedef struct student{
-    struct student *prev;
     int number;
     char *name;
     date birthday;
@@ -43,6 +42,11 @@ typedef struct student{
     double balance;
     struct student *next;
 } student;
+
+typedef struct student_list{
+    struct student *first;
+    struct student *last; // verficar quando apagar estudante
+} student_list;
 
 typedef struct product{
     char *barcode;
@@ -67,8 +71,10 @@ typedef struct bill{
 
 
 
-
-int bar_init(bar **bar, student **students, product **products);
+int is_valid_int(char str[]);
+void bar_init(bar **bar, student_list **students, product **products);
+int student_number_exists(int new_number, student_list **students);
+int cli_add_student(student_list **students);
 int main(int argc, char *argv[]);
 
 
