@@ -66,6 +66,8 @@ void bar_init(bar **bar, student_list **students, product **products){
         printf("Não foi possível carregar o ficheiro de ESTUDANTES.");
         exit(1);
     }
+    (*students) = calloc(1,sizeof (struct student_list));
+
     while(fgets(buf, MAX_SIZE_LINE, students_fp)!=NULL){
         student *s = calloc(1,sizeof(student));
 
@@ -98,9 +100,11 @@ void bar_init(bar **bar, student_list **students, product **products){
         s->birthday.year = atoi(date_ptr);
         free(date);
 
-        student *last_student_added = (*students)->last;
-
-        last_student_added->next = s;
+        if((*students)->first==NULL){
+            (*students)->first = s;
+            (*students)->last = s;
+        }
+        (*students)->last->next = s;
         (*students)->last = s;
 
     }
@@ -208,7 +212,7 @@ int cli_add_student(student_list **students){
 
 int main(int argc, char *argv[]){
     bar *bar_set = NULL;
-    student_list *students = NULL;
+    student_list *students = malloc(sizeof(student_list));
     product *products = NULL;
     bill *bills = NULL;
 
