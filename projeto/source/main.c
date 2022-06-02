@@ -320,8 +320,8 @@ int cli_add_student(student **students){
     printf("\n***  ADICIONAR ALUNO   ***");
     printf("\n***************************\n");
 
-    int number;
-    if(number = asks_for_student_number(students) <= -999){
+    int number = asks_for_student_number(students);
+    if(number <= -999){
         return -1;
     }
 
@@ -408,6 +408,113 @@ void cli_list_students(student **students){
     }
 }
 
+
+void cli_show_user_bills(student *s, bill **bills){
+    printf("***************************\n");
+    printf("TRANSAÇÕES DO ALUNO \n");
+    printf("***************************\n");
+
+    bill_list *user_bills = malloc(sizeof(struct bill_list));
+    user_bills = NULL;
+    int bill_id = 1;
+    for(bill *a_bill = (*bills); a_bill != NULL ; a_bill = a_bill->next){
+        if(a_bill->student == s){
+            bill_list *new_bill = malloc(sizeof(struct bill_list));
+            new_bill->id = bill_id;
+            new_bill->node = a_bill;
+            new_bill->next = user_bills;
+            user_bills = new_bill;
+            bill_id++;
+        }
+    }
+
+    if(!user_bills){
+        printf("SEM TRANSAÇÕES PARA MOSTRAR. ");
+        enter_to_continue();
+    }else{
+        bill_list *user_bills_list = user_bills;
+        for(; user_bills_list != NULL ;){
+            printf("%d\t", user_bills_list->id);
+            if(user_bills_list->node->type==0) printf("COMPRA        ");
+            if(user_bills_list->node->type==1) printf("CARREGAMENTO  ");
+            printf("%s | %.2f€\n", date_to_str(user_bills_list->node->date), user_bills_list->node->total);
+            user_bills_list = user_bills_list->next;
+        }
+        printf("***************************\n");
+        char input[MAX_SIZE_INPUT];
+        int menu = -1;
+        printf("1 - MOSTRAR TRANSAÇÃO\n");
+        printf("2 - VOLTAR AO MENU ANTERIOR\n");
+        while(menu<0){
+            printf("OPÇÃO \t# ");
+            scanf("%s", input);
+            menu = is_valid_int(input);
+            switch (menu) {
+                case 1:
+                {
+                    int id = -1;
+                    char input_id[MAX_SIZE_INPUT];
+                    while(id<0){
+                        printf("ID \t# ");
+                        scanf("%s", input_id);
+                        if(strcmp(input_id, "c!")==0) return;
+                        id = is_valid_int(input_id);
+                        if(id>bill_id-1) id=-1;
+                    }
+                    user_bills_list = user_bills;
+                    for(; user_bills_list != NULL ;){
+                        if(user_bills_list->id == id){
+                            show_bill(user_bills_list->node);
+                            enter_to_continue();
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case 2:
+                    return;
+                default:
+                    printf("OPÇÃO INVÁLIDA. ");
+                    enter_to_continue();
+            }
+        }
+    }
+
+
+
+}
+
+void cli_student(student *s, bill **bills){
+
+    char input[MAX_SIZE_INPUT];
+    int menu = -1;
+    while(menu<0){
+        printf("***************************\n");
+        printf("%s (%d)\nANO: %dº | TURMA: %s\nANIVERSÁRIO: %s\n", s->name, s->number, s->class_year, s->class_letter,
+               date_to_str(s->birthday));
+        printf("***************************\n");
+        printf("1 - TRANSAÇÕES DO ALUNO\n");
+        printf("2 - APAGAR ALUNO\n");
+        printf("3 - VOLTAR AO MENU ANTERIOR\n");
+        printf("OPÇÃO \t# ");
+        scanf("%s", input);
+        menu = is_valid_int(input);
+        switch (menu) {
+            case 1:
+                cli_show_user_bills(s, bills);
+                break;
+            case 2:
+                // TODO: APAGAR ALUNO
+                break;
+            case 3:
+                return;
+            default:
+                printf("OPÇÃO INVÁLIDA. ");
+                enter_to_continue();
+        }
+    }
+
+}
 /**
  * Verifica se string é um float
  * @param str
@@ -441,10 +548,13 @@ int cli_top_up(bar **bar_set, student **students, bill **bills){
         return -1;
     }
 
+    student *s = get_student_profile(students,number);
+    printf("%s\nSALDO: %.2f€\n", s->name, s->balance);
+
     float amount = -1;
     char amount_input[MAX_SIZE_INPUT];
     while(amount<0){
-        printf("MONTANTE # ");
+        printf("\tMONTANTE A CARREGAR # ");
         scanf("%s", amount_input);
         if(strcmp(amount_input, "c!")==0) return -1;
         amount = is_valid_float(amount_input);
@@ -458,12 +568,11 @@ int cli_top_up(bar **bar_set, student **students, bill **bills){
     char verify_check[MAX_SIZE_INPUT];
     while(verify<0){
         printf("CONFIRMA CARREGAMENTO? s/n \t#");
-        scanf("%s", &verify_check);
+        scanf("%s", verify_check);
         if(strcmp(verify_check, "s")==0) verify=1;
         if(strcmp(verify_check, "n")==0) verify=0;
     }
     if(verify==1){
-        student *s = get_student_profile(students,number);
         bill *new_top_up = malloc(sizeof(bill));
         if(!new_top_up){
             printf("---->  ERRO A REGISTAR TRANSAÇÃO, A MESMA SERÁ CANCELADA. (malloc error)\n");
@@ -486,14 +595,30 @@ int cli_top_up(bar **bar_set, student **students, bill **bills){
         printf("MONTANTE: %.2f€\n", amount);
         printf("SALDO DO ALUNO: %.2f€\n", s->balance);
         printf("***************************\n");
-        enter_to_continue();
         return 1;
     }else{
         return 0;
     }
-
-
 }
+
+void show_bill(bill *b){
+    printf("\e[1;1H\e[2J");
+    printf("*************************** ");
+    printf("\n***       TRANSAÇÃO      ***");
+    printf("\n***************************\n");
+    printf("%s\t\t (%d, %s)\n", b->student->name, b->student->class_year, b->student->class_letter);
+    char *date = date_to_str(b->date);
+    printf("%s\n", date);
+    free(date);
+    printf("***************************\n");
+    if(b->type == 1){
+        printf("CARREGAMENTO\n");
+        printf("MONTANTE: %.2f€\n", b->total);
+    }
+    return;
+}
+
+
 
 int main(int argc, char *argv[]) {
     bar *bar_set = NULL;
@@ -538,15 +663,19 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 2:
-                //Mostra perfil
-                //Ver transacoes?
-                //fazer compra?
-                //apagar aluno?
-                // sair
+            {
+                int number = asks_for_student_number(&students);
+                if(number <= -999){
+                    break;
+                }
+                student *s = get_student_profile(&students, number);
+                cli_student(s, &bills);
                 break;
+            }
             case 3:
                 cli_list_students(&students);
                 enter_to_continue();
+                break;
             case 4:
                 break;
             case 5:
@@ -556,20 +685,20 @@ int main(int argc, char *argv[]) {
                 } else {
                     printf("---> CONTA ALUNO *NÃO* CARREGADA. ");
                     enter_to_continue();
-                    case 6:
-                        break;
-                    case 7:
-                        break;
-                    case 8:
-                        break;
-                    default:
-                        // Not workin
-                        printf("OPÇÃO INVÁLIDA. ");
-                    enter_to_continue();
-                    break;
                 }
-
+                break;
+            case 6:
+                break;
+            case 7:
+                break;
+            case 8:
+                break;
+            default:
+                printf("OPÇÃO INVÁLIDA. ");
+                enter_to_continue();
+                break;
         }
 
     }
 }
+

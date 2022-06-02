@@ -68,6 +68,12 @@ typedef struct bill{
     struct bill *next;
 } bill;
 
+typedef struct bill_list{
+    int id;
+    bill *node;
+    struct bill_list *next;
+} bill_list;
+
 
 void bar_init(bar **bar, student **students, product **products);
 void bar_save(bar **bar, student **students, product **products, bill **bils);
@@ -85,10 +91,12 @@ student *get_student_profile(student **students, int number);
 void print_student_profile(student *s);
 int cli_add_student(student **students);
 void cli_list_students(student **students);
+void cli_show_user_bills(student *s, bill **bills);
+void cli_student(student *student, bill **bills);
 /** for bills */
 float is_valid_float(char str[]);
 int cli_top_up(bar **bar_set, student **students, bill **bills);
-
+void show_bill(bill *b);
 
 int main(int argc, char *argv[]);
 
