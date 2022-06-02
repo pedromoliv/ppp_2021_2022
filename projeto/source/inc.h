@@ -15,6 +15,8 @@
 #define PRODUCTS_FILENAME "products.txt"
 #define BILLS_FILENAME "bills.txt"
 
+#define MIN_YEAR 1990
+#define MAX_YEAR 2010
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,11 +45,6 @@ typedef struct student{
     struct student *next;
 } student;
 
-typedef struct student_list{
-    struct student *first;
-    struct student *last; // verficar quando apagar estudante
-} student_list;
-
 typedef struct product{
     char *barcode;
     char *name;
@@ -72,9 +69,15 @@ typedef struct bill{
 
 
 int is_valid_int(char str[]);
-void bar_init(bar **bar, student_list **students, product **products);
-int student_number_exists(int new_number, student_list **students);
-int cli_add_student(student_list **students);
+void bar_init(bar **bar, student **students, product **products);
+int is_valid_int(char str[]);
+int is_leap(int y);
+int verify_date(char str[]);
+char *date_to_str(date d);
+date str_to_date(char str[]);
+int student_number_exists(int new_number, student **students);
+void print_student_profile(student *s);
+int cli_add_student(student **students);
 int main(int argc, char *argv[]);
 
 
