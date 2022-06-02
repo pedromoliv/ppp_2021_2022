@@ -135,7 +135,7 @@ void bar_init(bar **bar, student **students, product **products){
 }
 
 /**
- * Verifica se array de carateres é um número
+ * Verifica se string é um número
  * @param str
  * @return  -999 se não for um número, ou o número introduzido
  */
@@ -150,6 +150,20 @@ int is_valid_int(char str[]){
     int num = atoi(str);
     return num;
 }
+
+/**
+ * Aguarda leitura do utilizador
+ */
+void enter_to_continue(){
+    printf("<ENTER> PARA CONTINUAR ");
+    char wait[MAX_SIZE_INPUT];
+    fflush(stdin);
+    while(fgets(wait,MAX_SIZE_INPUT,stdin) != NULL){
+        fflush(stdin);
+        return;
+    }
+}
+
 
 /**
  * Verifica se ano é bissexto
@@ -191,13 +205,13 @@ int verify_date(char str[]){
                     return 0;
             }
         }
-        if (mm == 4 || mm == 6 || mm == 9 || mm == 11)
+        if (mm == 4 || mm == 6 || mm == 9 || mm == 11){
             if(dd <= 30){
                 return 1;
-            }
-            else{
+            }else{
                 return 0;
             }
+        }
         return 1;
     }
     return 0;
@@ -231,6 +245,34 @@ date str_to_date(char str[]){
 }
 
 /**
+ * Pede numero de estudante ao utilizador
+ * @param students
+ * @return
+ */
+int asks_for_student_number(student **students){
+    int number = -999;
+    char input[MAX_SIZE_INPUT];
+    while(number==-999){
+        printf("NÚMERO # ");
+        scanf("%s", input);
+        if(strcmp(input, "c!")==0) return -999;
+        number = is_valid_int(input);
+        if(number==-999) {
+            printf("NÃO FOI INTRODUZIDO UM NÚMERO VÁLIDO. ");
+            enter_to_continue();
+            number = -999;
+        }else{
+            if(student_number_exists(number, students)==0){
+                printf("NÚMERO DE ESTUDANTE INEXISTENTE. ");
+                enter_to_continue();
+                number = -999;
+            }
+        }
+    }
+    return number;
+}
+
+/**
  * Verifica se existe algum estudante com new_number
  * @param new_number
  * @param students
@@ -241,6 +283,13 @@ int student_number_exists(int new_number, student **students){
         if(new_number == st->number) return 1;
     }
     return 0;
+}
+
+student *get_student_profile(student **students, int number){
+    for(student * st = (*students); st->next != NULL ; st = st->next){
+        if(number == st->number) return st;
+    }
+    return NULL;
 }
 
 /**
@@ -271,18 +320,9 @@ int cli_add_student(student **students){
     printf("\n***  ADICIONAR ALUNO   ***");
     printf("\n***************************\n");
 
-    int number = -999;
-    char input[MAX_SIZE_INPUT];
-    while(number==-999){
-        printf("NÚMERO # ");
-        scanf("%s", input);
-        if(strcmp(input, "c!")==0) return -1;
-        number = is_valid_int(input);
-        if(number==-999) printf("NÃO FOI INTRODUZIDO UM NÚMERO VÁLIDO\n");
-        if(student_number_exists(number, students)==1){
-            printf("JÁ EXISTE UM ESTUDANTE COM ESSE NÚMERO\n");
-            number = -999;
-        }
+    int number;
+    if(number = asks_for_student_number(students) <= -999){
+        return -1;
     }
 
     char name[MAX_SIZE_INPUT];
@@ -364,11 +404,98 @@ void cli_list_students(student **students){
     printf("LISTAR TODOS OS ALUNOS\n");
     printf("***************************\n");
     for(student * st = (*students); st->next != NULL ; st = st->next){
-        printf("%d\t%s\t(%d, %s)\n", st->number, st->name, st->class_year, st->class_letter);
+        printf("%d\t(%d, %s) %s\t\t[%.2f€]\n", st->number, st->class_year, st->class_letter, st->name, st->balance);
     }
 }
 
-int main(int argc, char *argv[]){
+/**
+ * Verifica se string é um float
+ * @param str
+ * @return -999 se não for um número, ou o número introduzido
+ */
+float is_valid_float(char str[]){
+    char *p;
+    float d = strtof(str, &p);
+    if (*p != 0) {
+        return -999;
+    }
+    float x = atof(str);
+    return x;
+}
+
+/**
+ * CLI de carregamentos
+ * @param bar_set
+ * @param students
+ * @param bills
+ * @return
+ */
+int cli_top_up(bar **bar_set, student **students, bill **bills){
+    printf("\e[1;1H\e[2J");
+    printf("***************************\n");
+    printf("CARREGAR CONTA ALUNO\n");
+    printf("***************************\n");
+
+    int number = asks_for_student_number(students);
+    if(number <= -999){
+        return -1;
+    }
+
+    float amount = -1;
+    char amount_input[MAX_SIZE_INPUT];
+    while(amount<0){
+        printf("MONTANTE # ");
+        scanf("%s", amount_input);
+        if(strcmp(amount_input, "c!")==0) return -1;
+        amount = is_valid_float(amount_input);
+        if(amount==-999) {
+            printf("NÃO FOI INTRODUZIDO UM MONTANTE VÁLIDO. ");
+            enter_to_continue();
+        }
+    }
+
+    int verify = -1;
+    char verify_check[MAX_SIZE_INPUT];
+    while(verify<0){
+        printf("CONFIRMA CARREGAMENTO? s/n \t#");
+        scanf("%s", &verify_check);
+        if(strcmp(verify_check, "s")==0) verify=1;
+        if(strcmp(verify_check, "n")==0) verify=0;
+    }
+    if(verify==1){
+        student *s = get_student_profile(students,number);
+        bill *new_top_up = malloc(sizeof(bill));
+        if(!new_top_up){
+            printf("---->  ERRO A REGISTAR TRANSAÇÃO, A MESMA SERÁ CANCELADA. (malloc error)\n");
+            enter_to_continue();
+            return -999;
+        }
+        new_top_up->type = 1;
+        new_top_up->date = (*bar_set)->today;
+        new_top_up->student = s;
+        new_top_up->description = NULL;
+        new_top_up->total = amount;
+        new_top_up->next = (*bills);
+        (*bills) = new_top_up;
+
+        s->balance += amount;
+        printf("***************************\n");
+        printf("   CARREGAMENTO EFECTUADO\n");
+        printf("%s (%d)\n", s->name, s->number);
+        printf("***************************\n");
+        printf("MONTANTE: %.2f€\n", amount);
+        printf("SALDO DO ALUNO: %.2f€\n", s->balance);
+        printf("***************************\n");
+        enter_to_continue();
+        return 1;
+    }else{
+        return 0;
+    }
+
+
+}
+
+int main(int argc, char *argv[]) {
     bar *bar_set = NULL;
     student *students = malloc(sizeof(student));
     students = NULL;
@@ -378,7 +505,7 @@ int main(int argc, char *argv[]){
     bar_init(&bar_set, &students, &products);
 
     int menu = 0;
-    while(menu != 4){
+    while (menu != 4) {
         printf("\e[1;1H\e[2J");
         printf("*************************** ");
         printf("\n***      %s     ***", bar_set->name);
@@ -402,35 +529,47 @@ int main(int argc, char *argv[]){
 
         switch (menu) {
             case 1:
-                if(cli_add_student(&students)==1){
-                    printf("---->  ALUNO ADICIONADO.\n");
-                }else{
-                    printf("---> ALUNO NÃO ADICIONADO.\n");
+                if (cli_add_student(&students) == 1) {
+                    printf("---->  ALUNO ADICIONADO. ");
+                    enter_to_continue();
+                } else {
+                    printf("---> ALUNO *NÃO* ADICIONADO. ");
+                    enter_to_continue();
                 }
                 break;
             case 2:
+                //Mostra perfil
+                //Ver transacoes?
+                //fazer compra?
+                //apagar aluno?
+                // sair
                 break;
             case 3:
                 cli_list_students(&students);
-                break;
+                enter_to_continue();
             case 4:
                 break;
             case 5:
-                break;
-            case 6:
-                break;
-            case 7:
-                break;
-            case 8:
-                break;
-            default:
-                // Not workin
-                printf("OPÇÃO INVÁLIDA, <ENTER PARA CONTINUAR>\n");
-                char i = 0;
-                while (i != '\r' && i != '\n') { fflush(stdout); i = getchar(); }
-                break;
+                if (cli_top_up(&bar_set, &students, &bills) == 1) {
+                    printf("---->  CONTA ALUNO CARREGADA. ");
+                    enter_to_continue();
+                } else {
+                    printf("---> CONTA ALUNO *NÃO* CARREGADA. ");
+                    enter_to_continue();
+                    case 6:
+                        break;
+                    case 7:
+                        break;
+                    case 8:
+                        break;
+                    default:
+                        // Not workin
+                        printf("OPÇÃO INVÁLIDA. ");
+                    enter_to_continue();
+                    break;
+                }
+
         }
 
     }
-
 }

@@ -15,6 +15,7 @@
 #define PRODUCTS_FILENAME "products.txt"
 #define BILLS_FILENAME "bills.txt"
 
+
 #define MIN_YEAR 1990
 #define MAX_YEAR 2010
 
@@ -64,20 +65,31 @@ typedef struct bill{
     student *student;
     bill_descriptive *description;
     float total;
+    struct bill *next;
 } bill;
 
 
-
-int is_valid_int(char str[]);
 void bar_init(bar **bar, student **students, product **products);
+void bar_save(bar **bar, student **students, product **products, bill **bils);
 int is_valid_int(char str[]);
+void enter_to_continue();
+/** for dates */
 int is_leap(int y);
 int verify_date(char str[]);
 char *date_to_str(date d);
 date str_to_date(char str[]);
+/** for students */
+int asks_for_student_number(student **students);
 int student_number_exists(int new_number, student **students);
+student *get_student_profile(student **students, int number);
 void print_student_profile(student *s);
 int cli_add_student(student **students);
+void cli_list_students(student **students);
+/** for bills */
+float is_valid_float(char str[]);
+int cli_top_up(bar **bar_set, student **students, bill **bills);
+
+
 int main(int argc, char *argv[]);
 
 
