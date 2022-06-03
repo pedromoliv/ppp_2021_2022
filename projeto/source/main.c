@@ -14,7 +14,7 @@
  * @param products
  * @return
  */
-void bar_init(bar **bar, student **students, product **products){
+void bar_init(bar **bar, student **students, product **products, bill **bills){
     char buf[MAX_SIZE_LINE];
 
     // Carregar info-geral do bar
@@ -23,7 +23,7 @@ void bar_init(bar **bar, student **students, product **products){
     FILE *init_fp;
     init_fp = fopen(INIT_FILENAME, "r");
     if (init_fp == NULL){
-        printf("Não foi possível carregar o ficheiro de INICIALIZAÇÃO.");
+        printf("Não foi possível carregar o ficheiro de INICIALIZAÇÃO para leitura.");
         exit(1);
     }
 
@@ -63,7 +63,7 @@ void bar_init(bar **bar, student **students, product **products){
     FILE *students_fp;
     students_fp = fopen(STUDENTS_FILENAME, "r");
     if (students_fp == NULL){
-        printf("Não foi possível carregar o ficheiro de ESTUDANTES.");
+        printf("Não foi possível carregar o ficheiro de ESTUDANTES para leitura.");
         exit(1);
     }
     (*students) = calloc(1,sizeof(struct student));
@@ -86,11 +86,14 @@ void bar_init(bar **bar, student **students, product **products){
         s->class_year = atoi(part);
 
         part = strtok(NULL, ";");
-        s->class_letter = malloc(sizeof(char)* strlen(part));
-        strcpy(s->class_letter, part);
+        char *classletter = malloc(sizeof(char)* strlen(part));
+        strcpy(classletter, part);
+
 
         part = strtok(NULL, ";");
-        s->balance = atol(part);
+
+        char *total = malloc(sizeof(char)*strlen(part));
+        strcpy(total, part);
 
         char *date_ptr = strtok(date, "-");
         s->birthday.day = atoi(date_ptr);
@@ -100,6 +103,10 @@ void bar_init(bar **bar, student **students, product **products){
         s->birthday.year = atoi(date_ptr);
         free(date);
 
+        s->balance = atol(total);
+        free(total);
+        s->class_letter = malloc(sizeof(char)* strlen(classletter));
+        strcpy(s->class_letter, classletter);
         s->next = (*students);
         (*students) = s;
 
@@ -109,7 +116,7 @@ void bar_init(bar **bar, student **students, product **products){
     FILE *products_fp;
     products_fp = fopen(PRODUCTS_FILENAME, "r");
     if (products_fp == NULL){
-        printf("Não foi possível carregar o ficheiro de PRODUTOS.");
+        printf("Não foi possível carregar o ficheiro de PRODUTOS para leitura.");
         exit(1);
     }
     while(fgets(buf, MAX_SIZE_LINE, products_fp)!=NULL){
@@ -132,7 +139,102 @@ void bar_init(bar **bar, student **students, product **products){
     }
     fclose(products_fp);
 
+    FILE *bills_fp;
+    bills_fp = fopen(BILLS_FILENAME, "r");
+    if (bills_fp == NULL){
+        printf("Não foi possível carregar o ficheiro de VENDAS para leitura.");
+        exit(1);
+    }
+    while(fgets(buf, MAX_SIZE_LINE, bills_fp)!=NULL){
+        char buf_bill_descriptive[MAX_SIZE_LINE];
+        bill *b = calloc(1,sizeof(bill));
+
+        char *part = strtok(buf, ";");
+        b->type = atoi(part);
+
+        part = strtok(NULL, ";");
+        char str_date[20];
+        strcpy(str_date, part);
+
+        part = strtok(NULL,";");
+        int student_number = atoi(part);
+
+        part = strtok(NULL,";");
+
+        if(b->type==0){
+            strcpy(buf_bill_descriptive, part);
+            char * bill_descriptive_lines_part = strtok(buf_bill_descriptive, ":");
+            while (bill_descriptive_lines_part != NULL) {
+                char * bill_info = strtok(bill_descriptive_lines_part, ",");
+                bill_descriptive *b_l = malloc(sizeof(struct bill_descriptive));
+                b_l->quantity = atoi(bill_info);
+
+                bill_info = strtok(NULL, ",");
+                b_l->product = product_search(bill_info, &(*products));
+                b_l->next = b->description;
+                b->description = b_l;
+
+                bill_descriptive_lines_part = strtok(NULL, ":");
+            }
+        }
+        char *total = malloc(sizeof(char)*strlen(part));
+        strcpy(total, part);
+
+        b->total = atof(total);
+        b->student = get_student_profile(&(*students), student_number);
+        b->date = str_to_date(str_date);
+        b->next = (*bills);
+        (*bills) = b;
+
+    }
+    fclose(products_fp);
+
 }
+
+void bar_save_bar_set(bar **bar_set){
+    FILE *init_fp;
+    init_fp = fopen(INIT_FILENAME, "w");
+    if (init_fp == NULL){
+        printf("Não foi possível carregar o ficheiro de INICIALIZAÇÃO para escrita.");
+        exit(1);
+    }
+    fprintf(init_fp, "%s\n%s\n%s", (*bar_set)->name, (*bar_set)->address, date_to_str((*bar_set)->today));
+    fclose(init_fp);
+    return;
+}
+
+void bar_save_students(student **students){
+    FILE *students_fp;
+    students_fp = fopen(STUDENTS_FILENAME, "w");
+    if (students_fp == NULL){
+        printf("Não foi possível carregar o ficheiro de ESTUDANTES para escrita.");
+        exit(1);
+    }
+    for(student *s = (*students); s->next!=NULL; s=s->next){
+        fprintf(students_fp, "%d;%s;%s;%d;%s;%.2f\n", s->number, s->name, date_to_str(s->birthday), s->class_year, s->class_letter, s->balance);
+    }
+    fclose(students_fp);
+    return;
+}
+
+void bar_save_bills(bill **bills){
+    FILE *bills_fp;
+    bills_fp = fopen(BILLS_FILENAME, "w");
+    if (bills_fp == NULL){
+        printf("Não foi possível carregar o ficheiro de VENDAS para escrita.");
+        exit(1);
+    }
+    for(bill *b = (*bills); b!=NULL; b=b->next){
+        fprintf(bills_fp, "%d;%s;%d;", b->type, date_to_str(b->date), b->student->number);
+        for(bill_descriptive *b_l = b->description; b_l!=NULL; b_l=b_l->next){
+            fprintf(bills_fp, "%d,%s:", b_l->quantity, b_l->product->barcode);
+        }
+        fprintf(bills_fp, "%.2f\n", b->total);
+    }
+    fclose(bills_fp);
+}
+
+
 
 /**
  * Verifica se string é um número
@@ -288,7 +390,7 @@ int cli_asks_for_student_number(student **students){
 
 
 student *get_student_profile(student **students, int number){
-    for(student * st = (*students); st->next != NULL ; st = st->next){
+    for(student * st = (*students); st != NULL ; st = st->next){
         if(number == st->number) return st;
     }
     return NULL;
@@ -322,9 +424,18 @@ int cli_add_student(student **students){
     printf("\n***  ADICIONAR ALUNO   ***");
     printf("\n***************************\n");
 
-    int number = cli_asks_for_student_number(students);
-    if(number <= -999){
-        return -1;
+    int number = -999;
+    char input[MAX_SIZE_INPUT];
+    while(number==-999){
+        printf("NÚMERO # ");
+        scanf("%s", input);
+        if(strcmp(input, "c!")==0) return -999;
+        number = is_valid_int(input);
+        if(number==-999) {
+            printf("NÃO FOI INTRODUZIDO UM NÚMERO VÁLIDO. ");
+            enter_to_continue();
+            number = -999;
+        }
     }
 
     char name[MAX_SIZE_INPUT];
@@ -397,6 +508,38 @@ int cli_add_student(student **students){
 }
 
 /**
+ * Compara dois nomes de estudante
+ * @param a
+ * @param b
+ * @return
+ */
+int compare_student(const void *p, const void *q) {
+    student *a = *((student **)p);
+    student *b = *((student **)q);
+    return strcmp(a->name, b->name);
+}
+
+/**
+ * Cria lista ordenada dos estudantes por ordem alfabética
+ * @param students
+ * @return
+ */
+student_list *sorted_student_list(student **students){
+    student_list *stlist_first = calloc(1,sizeof(struct student_list));
+    stlist_first = NULL;
+    int i = 1;
+    for(student *s = (*students); s->next!=NULL; s=s->next){
+            student_list *new_node = malloc(sizeof(struct student_list));
+            new_node->node = s;
+            new_node->next = stlist_first;
+            stlist_first = new_node;
+            i++;
+    }
+    qsort(stlist_first, i, sizeof(struct student_list), compare_student);
+    return stlist_first;
+}
+
+/**
  * CLI para listar todos os elementos do tipo estudante
  * @param students
  */
@@ -405,6 +548,7 @@ void cli_list_students(student **students){
     printf("***************************\n");
     printf("LISTAR TODOS OS ALUNOS\n");
     printf("***************************\n");
+    //student_list *sorted = sorted_student_list(students);
     for(student * st = (*students); st->next != NULL ; st = st->next){
         printf("%d\t(%d, %s) %s\t\t[%.2f€]\n", st->number, st->class_year, st->class_letter, st->name, st->balance);
     }
@@ -483,7 +627,49 @@ void cli_show_user_bills(student *s, bill **bills){
 
 }
 
-void cli_student(student *s, bill **bills){
+/**
+ * Apaga estudante
+ * @param s
+ * @param students
+ */
+int delete_student(student *student_to_delete, student **students){
+    student *s_prev = NULL;
+    for(student *s = (*students); s != NULL ; s = s->next){
+        if(student_to_delete==s){
+            if(!s_prev){
+                (*students)=s->next;
+                free(s->name);
+                free(s->class_letter);
+                free(s);
+                return 1;
+            }else{
+                s_prev->next = s->next;
+                free(s->name);
+                free(s->class_letter);
+                free(s);
+                return 1;
+            }
+        }
+        s_prev = s;
+    }
+    return -1;
+}
+
+student_list *get_students_below(float value, student **students){
+    student_list *sl = malloc(sizeof(struct student_list));
+    sl = NULL;
+    for(student *s =(*students); s->next!=NULL; s=s->next){
+        if(s->balance<value){
+            student_list *new_sl = malloc(sizeof(struct student_list));
+            new_sl->node = s;
+            new_sl->next = sl;
+            sl = new_sl;
+        }
+    }
+    return sl;
+}
+
+void cli_student(student *s, bill **bills, student **students){
 
     char input[MAX_SIZE_INPUT];
     int menu = -1;
@@ -503,8 +689,26 @@ void cli_student(student *s, bill **bills){
                 cli_show_user_bills(s, bills);
                 break;
             case 2:
-                // TODO: APAGAR ALUNO
-                break;
+            {
+                int verify = -1;
+                char verify_check[MAX_SIZE_INPUT];
+                while(verify<0){
+                    printf("CONFIRMA APAGAR ESTUDANTE? s/n \t#");
+                    scanf("%s", verify_check);
+                    if(strcmp(verify_check, "s")==0) verify=1;
+                    if(strcmp(verify_check, "n")==0) verify=0;
+                }
+                if(verify==1) {
+                    delete_student(s,students);
+                    bar_save_students(students);
+                    printf("ESTUDANTE APAGADO. ");
+                    enter_to_continue();
+                    return;
+                }else{
+                    printf("ESTUDANTE *NÃO* APAGADO. ");
+                    enter_to_continue();
+                }
+            }
             case 3:
                 return;
             default:
@@ -521,7 +725,7 @@ void cli_student(student *s, bill **bills){
  */
 float is_valid_float(char str[]){
     char *p;
-    float d = strtof(str, &p);
+    strtof(str, &p);
     if (*p != 0) {
         return -999;
     }
@@ -673,12 +877,13 @@ bill_descriptive *cli_asks_for_bill_descriptive(bill_descriptive **shopping_cart
     printf("\n* QUANTIDADExCODIGO_BARRAS *");
     printf("\n***************************\n");
     char input[MAX_SIZE_INPUT];
-    char input1[MAX_SIZE_INPUT];
+
     bill_descriptive *new_entry = *shopping_cart;
     while (new_entry == *shopping_cart) {
         printf("#\t ");
         scanf("%s", input);
         if (strcmp(input, "c!") == 0) return NULL;
+        char input1[MAX_SIZE_INPUT];
         strcpy(input1, input);
         char *part = strtok(input, "x");
         int parts = 0;
@@ -728,6 +933,7 @@ bill_descriptive *cli_asks_for_bill_descriptive(bill_descriptive **shopping_cart
             }
         }
     }
+    return new_entry;
 }
 
 
@@ -919,10 +1125,10 @@ int cli_bill(bar **bar_set, student **students, bill **bills, product **products
                         break;
                     }
                 }else{
-                    break;
+                    finished=-1;
+                    return finished;
                 }
-                finished = 1;
-                return finished;
+                break;
             }
             default:
                 printf("OPÇÃO INVÁLIDA. ");
@@ -943,10 +1149,10 @@ int main(int argc, char *argv[]) {
     product *products = NULL;
     bill *bills = NULL;
 
-    bar_init(&bar_set, &students, &products);
+    bar_init(&bar_set, &students, &products, &bills);
 
     int menu = 0;
-    while (menu != 4) {
+    while (menu != 8) {
         printf("\e[1;1H\e[2J");
         printf("*************************** ");
         printf("\n***      %s     ***", bar_set->name);
@@ -971,6 +1177,7 @@ int main(int argc, char *argv[]) {
         switch (menu) {
             case 1:
                 if (cli_add_student(&students) == 1) {
+                    bar_save_students(&students);
                     printf("---->  ALUNO ADICIONADO. ");
                     enter_to_continue();
                 } else {
@@ -985,7 +1192,7 @@ int main(int argc, char *argv[]) {
                     break;
                 }
                 student *s = get_student_profile(&students, number);
-                cli_student(s, &bills);
+                cli_student(s, &bills, &students);
                 break;
             }
             case 3:
@@ -993,9 +1200,38 @@ int main(int argc, char *argv[]) {
                 enter_to_continue();
                 break;
             case 4:
+            {
+                float amount = -1;
+                char amount_input[MAX_SIZE_INPUT];
+                while(amount<0){
+                    printf("\tMONTANTE A PROCURAR # ");
+                    scanf("%s", amount_input);
+                    if(strcmp(amount_input, "c!")==0) break;
+                    amount = is_valid_float(amount_input);
+                    if(amount==-999) {
+                        printf("NÃO FOI INTRODUZIDO UM MONTANTE VÁLIDO. ");
+                        enter_to_continue();
+                    }
+                }
+                student_list *students_below = get_students_below(amount, &students);
+                if(!students_below){
+                    printf("NÃO HÁ ESTUDNTES ABAIXO DE %.2f€.\n", amount);
+                    enter_to_continue();
+                }else{
+                    printf("***************************");
+                    printf("\n***   ABAIXO DE %.2f€   **", amount);
+                    printf("\n***************************\n");
+                    for(student_list *s = students_below; s!=NULL; s=s->next){
+                        printf("[%d]\t %s \t %.2f€\n", s->node->number, s->node->name, s->node->balance);
+                    }
+                    enter_to_continue();
+                }
                 break;
+            }
             case 5:
                 if (cli_top_up(&bar_set, &students, &bills) == 1) {
+                    bar_save_bills(&bills);
+                    bar_save_students(&students);
                     printf("---->  CONTA ALUNO CARREGADA. ");
                     enter_to_continue();
                 } else {
@@ -1005,6 +1241,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 6:
                 if (cli_bill(&bar_set, &students, &bills, &products) == 1) {
+                    bar_save_bills(&bills);
                     printf("---->  VENDA EFECTUADA. ");
                     enter_to_continue();
                 } else {
@@ -1013,7 +1250,19 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 7:
+            {
+                char new_date[MAX_SIZE_INPUT];
+                int valid_date = -1;
+                while(valid_date<=0){
+                    printf("NOVA DATA: ");
+                    scanf("%s", new_date);
+                    if(strcmp(new_date, "c!")==0) return -1;
+                    valid_date = verify_date(new_date);
+                }
+                bar_set->today = str_to_date(new_date);
+                bar_save_bar_set(&bar_set);
                 break;
+            }
             case 8:
                 break;
             default:

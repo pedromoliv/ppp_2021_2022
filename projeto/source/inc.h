@@ -17,7 +17,7 @@
 
 
 #define MIN_YEAR 1990
-#define MAX_YEAR 2010
+#define MAX_YEAR 2022
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -47,7 +47,6 @@ typedef struct student{
 } student;
 
 typedef struct student_list{
-    int id;
     student *node;
     struct student_list *next;
 }student_list;
@@ -87,8 +86,11 @@ typedef struct bill_descriptive_list{
     struct bill_descriptive_list *next;
 } bill_descriptive_list;
 
-void bar_init(bar **bar, student **students, product **products);
-void bar_save(bar **bar, student **students, product **products, bill **bils);
+void bar_init(bar **bar, student **students, product **products, bill **bills);
+void bar_save_bar_set(bar **bar_set);
+void bar_save_students(student **students);
+void bar_save_bills(bill **bills);
+void bar_save(bar **bar, student **students, product **products, bill **bills);
 int is_valid_int(char str[]);
 void enter_to_continue();
 /** for dates */
@@ -102,9 +104,13 @@ int cli_asks_for_student_number(student **students);
 student *get_student_profile(student **students, int number);
 void print_student_profile(student *s);
 int cli_add_student(student **students);
+int compare_student(const void *p, const void *q);
+student_list *sorted_student_list(student **students);
 void cli_list_students(student **students);
 void cli_show_user_bills(student *s, bill **bills);
-void cli_student(student *student, bill **bills);
+int delete_student(student *student_to_delete, student **students);
+void cli_student(student *s, bill **bills, student **students);
+student_list *get_students_below(float value, student **students);
 /** for bills */
 float is_valid_float(char str[]);
 int cli_top_up(bar **bar_set, student **students, bill **bills);
