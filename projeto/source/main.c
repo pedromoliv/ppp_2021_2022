@@ -434,13 +434,11 @@ void cli_show_user_bills(student *s, bill **bills){
         printf("SEM TRANSAÇÕES PARA MOSTRAR. ");
         enter_to_continue();
     }else{
-        bill_list *user_bills_list = user_bills;
-        for(; user_bills_list != NULL ;){
+        for(bill_list *user_bills_list = user_bills; user_bills_list != NULL ;user_bills_list = user_bills_list->next){
             printf("%d\t", user_bills_list->id);
             if(user_bills_list->node->type==0) printf("COMPRA        ");
             if(user_bills_list->node->type==1) printf("CARREGAMENTO  ");
             printf("%s | %.2f€\n", date_to_str(user_bills_list->node->date), user_bills_list->node->total);
-            user_bills_list = user_bills_list->next;
         }
         printf("***************************\n");
         char input[MAX_SIZE_INPUT];
@@ -463,8 +461,7 @@ void cli_show_user_bills(student *s, bill **bills){
                         id = is_valid_int(input_id);
                         if(id>bill_id-1) id=-1;
                     }
-                    user_bills_list = user_bills;
-                    for(; user_bills_list != NULL ;){
+                    for(bill_list *user_bills_list = user_bills; user_bills_list != NULL ;user_bills_list = user_bills_list->next){
                         if(user_bills_list->id == id){
                             show_bill(user_bills_list->node);
                             enter_to_continue();
@@ -492,8 +489,8 @@ void cli_student(student *s, bill **bills){
     int menu = -1;
     while(menu<0){
         printf("***************************\n");
-        printf("%s (%d)\nANO: %dº | TURMA: %s\nANIVERSÁRIO: %s\n", s->name, s->number, s->class_year, s->class_letter,
-               date_to_str(s->birthday));
+        printf("%s (%d)\nANO: %dº | TURMA: %s\nANIVERSÁRIO: %s\nSALDO: %.2f€\n", s->name, s->number, s->class_year, s->class_letter,
+               date_to_str(s->birthday), s->balance);
         printf("***************************\n");
         printf("1 - TRANSAÇÕES DO ALUNO\n");
         printf("2 - APAGAR ALUNO\n");
@@ -619,9 +616,12 @@ void show_bill(bill *b){
     printf("***************************\n");
     if(b->type == 1){
         printf("CARREGAMENTO\n");
+        printf("***************************\n");
         printf("MONTANTE: %.2f€\n", b->total);
     }else{
-
+        printf("COMPRA\n");
+        printf("***************************\n");
+        cli_print_cart(b->description);
     }
     return;
 }
@@ -738,7 +738,6 @@ bill_descriptive *cli_asks_for_bill_descriptive(bill_descriptive **shopping_cart
  */
 int cli_print_cart(bill_descriptive *shopping_cart){
     int qtd = 0;
-    printf("***************************\nCESTO\n***************************\n");
     for(bill_descriptive * b = shopping_cart; b != NULL ; b = b->next){
         printf("%d\t %s\t %.2f€\n", b->quantity, b->product->name, (b->quantity*b->product->price));
         qtd++;
@@ -775,7 +774,7 @@ int cli_bill(bar **bar_set, student **students, bill **bills, product **products
             }
             s = get_student_profile(students, number);
         }
-        printf("%s (%d)\n", s->name, s->number);
+        printf("%s (%d)\nSALDO: %.2f€\n", s->name, s->number, s->balance);
         if(!shopping_cart){
             printf("CESTO VAZIO.\n");
         }else{
@@ -807,6 +806,7 @@ int cli_bill(bar **bar_set, student **students, bill **bills, product **products
                     printf("O CESTO ESTÁ VAZIO. ");
                     enter_to_continue();
                 }else{
+                    printf("***************************\nCESTO\n***************************\n");
                     cli_print_cart(shopping_cart);
                     enter_to_continue();
                 }
@@ -827,6 +827,7 @@ int cli_bill(bar **bar_set, student **students, bill **bills, product **products
                     printf("CESTO VAZIO. ");
                     enter_to_continue();
                 }else{
+                    printf("***************************\nCESTO\n***************************\n");
                     int n_lines = cli_print_cart(shopping_cart);
                     int line_to_delete = -1;
                     char input_id[MAX_SIZE_INPUT];
@@ -865,27 +866,35 @@ int cli_bill(bar **bar_set, student **students, bill **bills, product **products
                     printf("CESTO VAZIO. ");
                     enter_to_continue();
                 }else{
-                    cli_print_cart(shopping_cart);
-                    int verify = -1;
-                    char verify_check[MAX_SIZE_INPUT];
-                    while(verify<0){
-                        printf("COMFIRMAR VENDA? s/n \t#");
-                        scanf("%s", verify_check);
-                        if(strcmp(verify_check, "s")==0) verify=1;
-                        if(strcmp(verify_check, "n")==0) verify=0;
-                    }
-                    if(verify==1){
-                        bill * new_bill = malloc(sizeof(struct bill));
-                        new_bill->type = 0;
-                        new_bill->date = (*bar_set)->today;
-                        new_bill->student = s;
-                        new_bill->description = shopping_cart;
-                        new_bill->total = cart_total(shopping_cart);
-                        new_bill->next = (*bills);
-                        (*bills) = new_bill;
-                        return 1;
-                    }else{
+                    if(s->balance<cart_total(shopping_cart)){
+                        printf("O ESTUDANTE NÃO TEM SALDO. SALDO ATUAL: %.2f€.\n", s->balance);
+                        enter_to_continue();
                         break;
+                    }else{
+                        printf("***************************\nCESTO\n***************************\n");
+                        cli_print_cart(shopping_cart);
+                        int verify = -1;
+                        char verify_check[MAX_SIZE_INPUT];
+                        while(verify<0){
+                            printf("COMFIRMAR VENDA? s/n \t#");
+                            scanf("%s", verify_check);
+                            if(strcmp(verify_check, "s")==0) verify=1;
+                            if(strcmp(verify_check, "n")==0) verify=0;
+                        }
+                        if(verify==1){
+                            bill * new_bill = malloc(sizeof(struct bill));
+                            new_bill->type = 0;
+                            new_bill->date = (*bar_set)->today;
+                            new_bill->student = s;
+                            new_bill->description = shopping_cart;
+                            new_bill->total = cart_total(shopping_cart);
+                            new_bill->student->balance -= cart_total(shopping_cart);
+                            new_bill->next = (*bills);
+                            (*bills) = new_bill;
+                            return 1;
+                        }else{
+                            break;
+                        }
                     }
                 }
                 break;
