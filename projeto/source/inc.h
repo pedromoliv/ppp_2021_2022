@@ -46,6 +46,12 @@ typedef struct student{
     struct student *next;
 } student;
 
+typedef struct student_list{
+    int id;
+    student *node;
+    struct student_list *next;
+}student_list;
+
 typedef struct product{
     char *barcode;
     char *name;
@@ -58,6 +64,7 @@ typedef struct bill_descriptive{
     product *product;
     struct bill_descriptive *next;
 } bill_descriptive;
+
 
 typedef struct bill{
     int type; // 0 = despesa, 1 = carregamento. Se = 1, description is NULL.
@@ -74,6 +81,11 @@ typedef struct bill_list{
     struct bill_list *next;
 } bill_list;
 
+typedef struct bill_descriptive_list{
+    int id;
+    bill_descriptive *node;
+    struct bill_descriptive_list *next;
+} bill_descriptive_list;
 
 void bar_init(bar **bar, student **students, product **products);
 void bar_save(bar **bar, student **students, product **products, bill **bils);
@@ -85,8 +97,8 @@ int verify_date(char str[]);
 char *date_to_str(date d);
 date str_to_date(char str[]);
 /** for students */
-int asks_for_student_number(student **students);
 int student_number_exists(int new_number, student **students);
+int cli_asks_for_student_number(student **students);
 student *get_student_profile(student **students, int number);
 void print_student_profile(student *s);
 int cli_add_student(student **students);
@@ -97,6 +109,12 @@ void cli_student(student *student, bill **bills);
 float is_valid_float(char str[]);
 int cli_top_up(bar **bar_set, student **students, bill **bills);
 void show_bill(bill *b);
+product *product_search(char *barcode, product **products);
+float cart_total(bill_descriptive *shopping_cart);
+int cart_total_articles(bill_descriptive *shopping_cart);
+bill_descriptive *cli_asks_for_bill_descriptive(bill_descriptive **shopping_cart, product **products);
+int cli_print_cart(bill_descriptive *shopping_cart);
+int cli_bill(bar **bar_set, student **students, bill **bills, product **products);
 
 int main(int argc, char *argv[]);
 

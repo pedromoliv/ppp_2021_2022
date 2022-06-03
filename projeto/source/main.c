@@ -245,11 +245,24 @@ date str_to_date(char str[]){
 }
 
 /**
+ * Verifica se existe algum estudante com new_number
+ * @param new_number
+ * @param students
+ * @return
+ */
+int student_number_exists(int new_number, student **students){
+    for(student * st = (*students); st->next != NULL ; st = st->next){
+        if(new_number == st->number) return 1;
+    }
+    return 0;
+}
+
+/**
  * Pede numero de estudante ao utilizador
  * @param students
  * @return
  */
-int asks_for_student_number(student **students){
+int cli_asks_for_student_number(student **students){
     int number = -999;
     char input[MAX_SIZE_INPUT];
     while(number==-999){
@@ -272,18 +285,7 @@ int asks_for_student_number(student **students){
     return number;
 }
 
-/**
- * Verifica se existe algum estudante com new_number
- * @param new_number
- * @param students
- * @return
- */
-int student_number_exists(int new_number, student **students){
-    for(student * st = (*students); st->next != NULL ; st = st->next){
-        if(new_number == st->number) return 1;
-    }
-    return 0;
-}
+
 
 student *get_student_profile(student **students, int number){
     for(student * st = (*students); st->next != NULL ; st = st->next){
@@ -320,7 +322,7 @@ int cli_add_student(student **students){
     printf("\n***  ADICIONAR ALUNO   ***");
     printf("\n***************************\n");
 
-    int number = asks_for_student_number(students);
+    int number = cli_asks_for_student_number(students);
     if(number <= -999){
         return -1;
     }
@@ -331,7 +333,7 @@ int cli_add_student(student **students){
     char class_letter[MAX_SIZE_INPUT];
 
     printf("NOME DO ALUNO: ");
-    scanf(" %[^\n]s",&name);
+    scanf(" %[^\n]s",name);
     if(strcmp(name, "c!")==0) return -1;
     for (int i = 0; name[i]!='\0'; i++) {
         if(name[i] >= 'a' && name[i] <= 'z') {
@@ -379,7 +381,7 @@ int cli_add_student(student **students){
     char verify_check[MAX_SIZE_INPUT];
     while(verify<0){
         printf("CONFIRMA? s/n \t#");
-        scanf("%s", &verify_check);
+        scanf("%s", verify_check);
         if(strcmp(verify_check, "s")==0) verify=1;
         if(strcmp(verify_check, "n")==0) verify=0;
     }
@@ -543,7 +545,7 @@ int cli_top_up(bar **bar_set, student **students, bill **bills){
     printf("CARREGAR CONTA ALUNO\n");
     printf("***************************\n");
 
-    int number = asks_for_student_number(students);
+    int number = cli_asks_for_student_number(students);
     if(number <= -999){
         return -1;
     }
@@ -601,10 +603,14 @@ int cli_top_up(bar **bar_set, student **students, bill **bills){
     }
 }
 
+/**
+ * Mostra talão
+ * @param b
+ */
 void show_bill(bill *b){
     printf("\e[1;1H\e[2J");
     printf("*************************** ");
-    printf("\n***       TRANSAÇÃO      ***");
+    printf("\n***       TALÃO      ***");
     printf("\n***************************\n");
     printf("%s\t\t (%d, %s)\n", b->student->name, b->student->class_year, b->student->class_letter);
     char *date = date_to_str(b->date);
@@ -614,9 +620,310 @@ void show_bill(bill *b){
     if(b->type == 1){
         printf("CARREGAMENTO\n");
         printf("MONTANTE: %.2f€\n", b->total);
+    }else{
+
     }
     return;
 }
+
+/**
+ * Procura o produto
+ * @param barcode
+ * @param products
+ * @return
+ */
+product *product_search(char *barcode, product **products){
+    for(product * p = (*products); p != NULL ; p = p->next){
+        if(strcmp(barcode, p->barcode)==0) return p;
+    }
+    return NULL;
+}
+
+/**
+ * Calcula o total do cesto, em preço
+ * @param shopping_cart
+ * @return
+ */
+float cart_total(bill_descriptive *shopping_cart){
+    float total = 0;
+    for(bill_descriptive * b = shopping_cart; b != NULL ; b = b->next){
+        total += b->quantity*b->product->price;
+    }
+    return total;
+}
+
+/**
+ * Calcula o total do cesto, em artigos
+ * @param shopping_cart
+ * @return
+ */
+int cart_total_articles(bill_descriptive *shopping_cart){
+    int total = 0;
+    for(bill_descriptive * b = shopping_cart; b != NULL ; b = b->next){
+        total += b->quantity;
+    }
+    return total;
+}
+
+
+
+bill_descriptive *cli_asks_for_bill_descriptive(bill_descriptive **shopping_cart, product **products) {
+    printf("***************************\n");
+    printf("*** ADICIONAR AO CESTO ***\n*                          *");
+    printf("\n* QUANTIDADExCODIGO_BARRAS *");
+    printf("\n***************************\n");
+    char input[MAX_SIZE_INPUT];
+    char input1[MAX_SIZE_INPUT];
+    bill_descriptive *new_entry = *shopping_cart;
+    while (new_entry == *shopping_cart) {
+        printf("#\t ");
+        scanf("%s", input);
+        if (strcmp(input, "c!") == 0) return NULL;
+        strcpy(input1, input);
+        char *part = strtok(input, "x");
+        int parts = 0;
+        while (part != NULL) {
+            parts++;
+            part = strtok(NULL, "x");
+        }
+
+        if (parts != 2) {
+            printf("NÃO SEGUE FORMATAÇÃO. QUANTIDADExCODIGO_BARRAS - ");
+            enter_to_continue();
+        } else {
+            part = strtok(input1, "x");
+            int amount;
+            if (is_valid_int(part) > 0) {
+                amount = atoi(part);
+                part = strtok(NULL, "x");
+                char *barcode = malloc(sizeof(char) * strlen(part));
+                strcpy(barcode, part);
+                product *productsearch = product_search(barcode, products);
+                if (productsearch != NULL) {
+                    int added = 0;
+                    for (bill_descriptive *entry = *shopping_cart; entry != NULL; entry = entry->next) {
+                        if (entry->product == productsearch) {
+                            entry->quantity += amount;
+                            added = 1;
+                            printf("> ATUALIZADO %d x %s.\n", entry->quantity, entry->product->name);
+                            return *shopping_cart;
+                        }
+                    }
+                    if (added==0) {
+                        bill_descriptive *shopping_cart_new_entry = malloc(sizeof(struct bill_descriptive));
+                        shopping_cart_new_entry->product = productsearch;
+                        shopping_cart_new_entry->quantity = amount;
+                        shopping_cart_new_entry->next = *shopping_cart;
+                        shopping_cart = &shopping_cart_new_entry;
+                        printf("> ADICIONADO %d x %s.\n", (*shopping_cart)->quantity, (*shopping_cart)->product->name);
+                        return *shopping_cart;
+                    }
+                } else {
+                    printf("CÓDIGO BARRAS NÃO EXISTE. ");
+                    enter_to_continue();
+                }
+            } else {
+                printf("QUANTIDADE NÃO É NÚMERO VÁLIDO. ");
+                enter_to_continue();
+            }
+        }
+    }
+}
+
+
+/**
+ * Mostra cesto, devolve quantidade número de produtos diferentes
+ * @param shopping_cart
+ * @return
+ */
+int cli_print_cart(bill_descriptive *shopping_cart){
+    int qtd = 0;
+    printf("***************************\nCESTO\n***************************\n");
+    for(bill_descriptive * b = shopping_cart; b != NULL ; b = b->next){
+        printf("%d\t %s\t %.2f€\n", b->quantity, b->product->name, (b->quantity*b->product->price));
+        qtd++;
+    }
+    printf("\t > TOTAL: %.2f€ [%d produtos]\n***************************\n", cart_total(shopping_cart),
+           cart_total_articles(shopping_cart));
+    return qtd;
+}
+
+/**
+ * CLI venda
+ * @param bar_set
+ * @param students
+ * @param bills
+ * @param products
+ * @return
+ */
+int cli_bill(bar **bar_set, student **students, bill **bills, product **products){
+    bill_descriptive *shopping_cart = malloc(sizeof(struct bill_descriptive));
+    student *s = NULL;
+    shopping_cart = NULL;
+    int finished = -1;
+    while(finished<0){
+        char input[MAX_SIZE_INPUT];
+        int menu = -1;
+        printf("\e[1;1H\e[2J");
+        printf("***************************");
+        printf("\n***        VENDA       ***");
+        printf("\n***************************\n");
+        if(!s){
+            int number = cli_asks_for_student_number(students);
+            if(number <= -999){
+                return -1;
+            }
+            s = get_student_profile(students, number);
+        }
+        printf("%s (%d)\n", s->name, s->number);
+        if(!shopping_cart){
+            printf("CESTO VAZIO.\n");
+        }else{
+            printf("%d produtos, total: %.2f€\n", cart_total_articles(shopping_cart), cart_total(shopping_cart));
+        }
+        printf("***************************\n");
+        printf("1 - VER PRODUTOS\n");
+        if(shopping_cart) printf("2 - VER CESTO\n");
+        printf("3 - ADICIONAR AO CESTO\n");
+        printf("4 - REMOVER DO CESTO\n");
+        printf("5 - FINALIZAR VENDA\n");
+        printf("6 - VOLTAR AO MENU ANTERIOR\n");
+
+        printf("OPÇÃO \t# ");
+        scanf("%s", input);
+        menu = is_valid_int(input);
+        switch (menu) {
+            case 1:
+                printf("***************************\nLISTA DE PRODUTOS\n***************************\n");
+                for(product * p = *products; p != NULL ; p = p->next){
+                    printf("%s\t %s\t %.2f€\n", p->barcode, p->name, p->price);
+
+                }
+                printf("***************************\n");
+                enter_to_continue();
+                break;
+            case 2:
+                if(!shopping_cart) {
+                    printf("O CESTO ESTÁ VAZIO. ");
+                    enter_to_continue();
+                }else{
+                    cli_print_cart(shopping_cart);
+                    enter_to_continue();
+                }
+                break;
+            case 3:
+            {
+                bill_descriptive *new_shopping_cart_entry = cli_asks_for_bill_descriptive(&shopping_cart, products);
+                enter_to_continue();
+                if(new_shopping_cart_entry == NULL){
+                    break;
+                }else{
+                    shopping_cart = new_shopping_cart_entry;
+                    break;
+                }
+            }
+            case 4:
+                if(!shopping_cart){
+                    printf("CESTO VAZIO. ");
+                    enter_to_continue();
+                }else{
+                    int n_lines = cli_print_cart(shopping_cart);
+                    int line_to_delete = -1;
+                    char input_id[MAX_SIZE_INPUT];
+                    while(line_to_delete<0){
+                        printf("LINHA A APAGAR \t#");
+                        scanf("%s", input_id);
+                        if(strcmp(input_id, "c!")==0) break;
+                        line_to_delete = is_valid_int(input_id);
+                        if(line_to_delete>n_lines) line_to_delete=-1;
+                    }
+                    int n = 1;
+                    bill_descriptive * shopping_cart_prev = NULL;
+                    bill_descriptive * b = shopping_cart;
+                    for(; b != NULL ; b = b->next){
+                        if(line_to_delete==1){
+                            bill_descriptive *sc = shopping_cart->next;
+                            free(shopping_cart);
+                            shopping_cart = sc;
+                            break;
+                        }else{
+                            shopping_cart_prev = shopping_cart;
+                            shopping_cart = shopping_cart_prev->next;
+                            if(line_to_delete==n){
+                                shopping_cart_prev->next = shopping_cart->next;
+                                free(shopping_cart);
+                                shopping_cart = shopping_cart_prev->next;
+                                break;
+                            }
+                        }
+                        n++;
+                    }
+                }
+                break;
+            case 5:
+                if(!shopping_cart){
+                    printf("CESTO VAZIO. ");
+                    enter_to_continue();
+                }else{
+                    cli_print_cart(shopping_cart);
+                    int verify = -1;
+                    char verify_check[MAX_SIZE_INPUT];
+                    while(verify<0){
+                        printf("COMFIRMAR VENDA? s/n \t#");
+                        scanf("%s", verify_check);
+                        if(strcmp(verify_check, "s")==0) verify=1;
+                        if(strcmp(verify_check, "n")==0) verify=0;
+                    }
+                    if(verify==1){
+                        bill * new_bill = malloc(sizeof(struct bill));
+                        new_bill->type = 0;
+                        new_bill->date = (*bar_set)->today;
+                        new_bill->student = s;
+                        new_bill->description = shopping_cart;
+                        new_bill->total = cart_total(shopping_cart);
+                        new_bill->next = (*bills);
+                        (*bills) = new_bill;
+                        return 1;
+                    }else{
+                        break;
+                    }
+                }
+                break;
+            case 6:
+            {
+                if(shopping_cart){
+                    printf("CESTO COM PRODUTOS. ");
+                    int verify = -1;
+                    char verify_check[MAX_SIZE_INPUT];
+                    while(verify<0){
+                        printf("PRETENDE APAGAR? s/n \t#");
+                        scanf("%s", verify_check);
+                        if(strcmp(verify_check, "s")==0) verify=1;
+                        if(strcmp(verify_check, "n")==0) verify=0;
+                    }
+                    if(verify==1){
+                        for(bill_descriptive * b = shopping_cart; b != NULL ; b = b->next){
+                            free(b);
+                        }
+                        return finished;
+                    }else{
+                        break;
+                    }
+                }else{
+                    break;
+                }
+                finished = 1;
+                return finished;
+            }
+            default:
+                printf("OPÇÃO INVÁLIDA. ");
+                enter_to_continue();
+        }
+    }
+    return 1;
+}
+
+
 
 
 
@@ -664,7 +971,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 2:
             {
-                int number = asks_for_student_number(&students);
+                int number = cli_asks_for_student_number(&students);
                 if(number <= -999){
                     break;
                 }
@@ -688,6 +995,13 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 6:
+                if (cli_bill(&bar_set, &students, &bills, &products) == 1) {
+                    printf("---->  VENDA EFECTUADA. ");
+                    enter_to_continue();
+                } else {
+                    printf("---> VENDA *NÃO* EFECTUADA. ");
+                    enter_to_continue();
+                }
                 break;
             case 7:
                 break;
